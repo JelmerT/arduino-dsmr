@@ -76,6 +76,21 @@ class P1Reader {
     }
 
     /**
+     * Create a new P1Reader. The stream passed should be the serial port to
+     * which the P1 TX pin is connected. The req_pin is the pin connected to the
+     * request pin. The req_en_pin is the pin connected to the OE pin of the
+     * 3-state line driver. Both pins are configured as an output, the Stream is
+     * assumed to be already set up (e.g. baud rate configured).
+     */
+    P1Reader(Stream *stream, uint8_t req_pin, uint8_t req_en_pin)
+      : stream(stream), req_pin(req_pin), req_en_pin(req_en_pin), once(false), state(State::DISABLED_STATE) {
+      pinMode(req_pin, OUTPUT);
+      pinMode(req_en_pin, OUTPUT);
+      digitalWrite(req_pin, LOW);
+      digitalWrite(req_en_pin, LOW);
+    }
+
+    /**
      * Enable the request pin, to request data on the P1 port.
      * @param  once    When true, the request pin is automatically
      *                 disabled once a complete and correct message was
@@ -85,6 +100,7 @@ class P1Reader {
      */
     void enable(bool once) {
       digitalWrite(this->req_pin, HIGH);
+      digitalWrite(this->req_en_pin, HIGH);
       this->state = State::WAITING_STATE;
       this->once = once;
     }
@@ -95,6 +111,7 @@ class P1Reader {
      * clear() is called.
      */
     void disable() {
+      digitalWrite(this->req_en_pin, LOW);
       digitalWrite(this->req_pin, LOW);
       this->state = State::DISABLED_STATE;
       if (!this->_available)
@@ -224,6 +241,7 @@ class P1Reader {
   protected:
     Stream *stream;
     uint8_t req_pin;
+    uint8_t req_en_pin;
     enum class State : uint8_t {
       DISABLED_STATE,
       WAITING_STATE,
